@@ -6,11 +6,13 @@
 import { initializeApp } from 'firebase/app';
 import {
   getFirestore,
+  initializeFirestore,
+  persistentLocalCache,
+  persistentSingleTabManager,
   doc,
   setDoc,
   getDoc,
   onSnapshot,
-  enableIndexedDbPersistence,
 } from 'firebase/firestore';
 
 const firebaseConfig = {
@@ -25,19 +27,18 @@ const firebaseConfig = {
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
 
-// Enable offline persistence
+// Initialize Firestore with persistence
+let db;
 try {
-  enableIndexedDbPersistence(db).catch((err) => {
-    if (err.code === 'failed-precondition') {
-      console.warn('Firebase: Multiple tabs open, persistence only in one tab.');
-    } else if (err.code === 'unimplemented') {
-      console.warn('Firebase: Browser does not support persistence.');
-    }
+  db = initializeFirestore(app, {
+    localCache: persistentLocalCache({
+      tabManager: persistentSingleTabManager({ forceOwnership: true }),
+    }),
   });
 } catch (e) {
-  // Already enabled
+  // Already initialized (HMR in dev mode)
+  db = getFirestore(app);
 }
 
 // Document reference for couple data
@@ -47,16 +48,17 @@ const coupleRef = doc(db, 'couples', COUPLE_DOC_ID);
 // === Save entire state to Firestore ===
 export async function saveToFirestore(data) {
   try {
+    const clean = JSON.parse(JSON.stringify(data));
     await setDoc(coupleRef, {
-      ...data,
+      ...clean,
       updatedAt: Date.now(),
     }, { merge: true });
   } catch (err) {
-    console.error('Firestore save error:', err);
+    console.warn('Firestore save:', err.message);
   }
 }
 
-// === Load state from Firestore ===
+// === Load state from Firestore (with timeout) ===
 export async function loadFromFirestore() {
   try {
     const snapshot = await getDoc(coupleRef);
@@ -64,23 +66,27 @@ export async function loadFromFirestore() {
       return snapshot.data();
     }
   } catch (err) {
-    console.error('Firestore load error:', err);
+    console.warn('Firestore load:', err.message);
   }
   return null;
 }
 
 // === Listen for real-time changes ===
 export function listenForChanges(callback) {
-  return onSnapshot(coupleRef, (snapshot) => {
-    if (snapshot.exists()) {
-      const data = snapshot.data();
-      // Check if the change came from the network (not local)
-      const source = snapshot.metadata.hasPendingWrites ? 'local' : 'server';
-      callback(data, source);
-    }
-  }, (err) => {
-    console.error('Firestore listener error:', err);
-  });
+  try {
+    return onSnapshot(coupleRef, (snapshot) => {
+      if (snapshot.exists()) {
+        const data = snapshot.data();
+        const source = snapshot.metadata.hasPendingWrites ? 'local' : 'server';
+        callback(data, source);
+      }
+    }, (err) => {
+      console.warn('Firestore listener:', err.message);
+    });
+  } catch (err) {
+    console.warn('Firestore setup:', err.message);
+    return () => {};
+  }
 }
 
 export { db, coupleRef };

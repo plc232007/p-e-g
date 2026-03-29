@@ -132,29 +132,41 @@ class Store {
     }
   }
 
-  // Initialize Firebase sync
+  // Initialize Firebase sync (non-blocking, with timeout)
   async initSync() {
-    // Try to load from Firestore
-    const remote = await loadFromFirestore();
-    if (remote) {
-      // Merge remote into local (remote wins for shared data)
-      this._state = { ...getDefaultState(), ...remote };
-      this._saveLocal();
-      this._notifyAll();
-    } else {
-      // First time: push local state to Firestore
-      await this._pushToFirestore();
-    }
+    try {
+      // Race: load from Firestore with a 4s timeout
+      const remote = await Promise.race([
+        loadFromFirestore(),
+        new Promise((resolve) => setTimeout(() => resolve(null), 4000)),
+      ]);
 
-    // Listen for real-time changes
-    this._unsubscribe = listenForChanges((data, source) => {
-      if (source === 'server' && !this._syncing) {
-        // Update from the other device
-        this._state = { ...this._state, ...data };
+      if (remote) {
+        this._state = { ...getDefaultState(), ...remote };
         this._saveLocal();
         this._notifyAll();
+      } else {
+        // First time or timeout: push local state
+        this._pushToFirestore(); // fire-and-forget
       }
-    });
+    } catch (err) {
+      console.warn('initSync failed, using local data:', err);
+    }
+
+    // Listen for real-time changes (fire-and-forget, won't block)
+    try {
+      this._unsubscribe = listenForChanges((data, source) => {
+        if (source === 'server' && !this._syncing) {
+          this._state = { ...this._state, ...data };
+          this._saveLocal();
+          this._notifyAll();
+          // Re-render current page if visible
+          window.dispatchEvent(new CustomEvent('firebaseupdate'));
+        }
+      });
+    } catch (err) {
+      console.warn('Firestore listener failed:', err);
+    }
   }
 
   async _pushToFirestore() {
