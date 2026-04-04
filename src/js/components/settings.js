@@ -6,6 +6,26 @@ import { store } from '../store.js';
 import { showToast, showModal } from '../ui.js';
 import { router } from '../router.js';
 
+// Inline logo for About section
+const ABOUT_LOGO = `
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none" width="48" height="48" style="margin:0 auto">
+  <defs>
+    <linearGradient id="bg-about" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#2c3e6b"/>
+      <stop offset="100%" stop-color="#1e2d52"/>
+    </linearGradient>
+    <linearGradient id="cross-about" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#c49a55"/>
+      <stop offset="100%" stop-color="#dab978"/>
+    </linearGradient>
+  </defs>
+  <circle cx="256" cy="256" r="240" fill="url(#bg-about)"/>
+  <rect x="240" y="100" width="32" height="280" rx="6" fill="url(#cross-about)"/>
+  <rect x="176" y="172" width="160" height="28" rx="6" fill="url(#cross-about)"/>
+  <ellipse cx="216" cy="350" rx="48" ry="32" fill="none" stroke="#c49a55" stroke-width="3.5" opacity="0.7" transform="rotate(-12, 216, 350)"/>
+  <ellipse cx="296" cy="350" rx="48" ry="32" fill="none" stroke="#dab978" stroke-width="3.5" opacity="0.6" transform="rotate(12, 296, 350)"/>
+</svg>`;
+
 export function renderSettings() {
   const user = store.getUser();
   const partner = store.getPartner();
@@ -64,9 +84,9 @@ export function renderSettings() {
     <!-- Danger Zone -->
     <div class="card flex-col" style="padding:var(--space-sm);margin-bottom:var(--space-lg)">
       <div class="settings-item" id="setting-reset">
-        <div class="settings-icon" style="background:rgba(239,68,68,0.1)">🗑️</div>
+        <div class="settings-icon" style="background:rgba(196,122,110,0.1)">🗑️</div>
         <div class="settings-info">
-          <div class="settings-name" style="color:#ef4444">Resetar Dados</div>
+          <div class="settings-name" style="color:#c47a6e">Resetar Dados</div>
           <div class="settings-desc">Apagar todos os planos e progresso</div>
         </div>
       </div>
@@ -74,11 +94,14 @@ export function renderSettings() {
 
     <!-- About -->
     <div class="card" style="text-align:center">
-      <div style="font-size:2rem;margin-bottom:var(--space-sm)">💜</div>
+      <div style="margin-bottom:var(--space-sm)">${ABOUT_LOGO}</div>
       <div class="heading-sm"><span class="text-gradient">P&G</span></div>
-      <div class="text-sm text-muted" style="margin-top:4px">v2.0.0 · Feito com amor</div>
+      <div class="text-sm text-muted" style="margin-top:4px">v2.1.0 · Feito com amor</div>
       <div class="text-xs text-muted" style="margin-top:var(--space-sm)">
         Pedro & Gabi · Cresçam juntos em fé, saúde e amor
+      </div>
+      <div class="text-xs text-secondary" style="margin-top:var(--space-xs);font-style:italic;opacity:0.7">
+        Santa Zélia e São Luís Martin, rogai por nós ✝️
       </div>
       <div class="text-xs text-muted" style="margin-top:var(--space-xs)">
         🟢 Sincronizado via Firebase

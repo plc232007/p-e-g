@@ -1,6 +1,7 @@
 /* ===================================
    P&G — Main App
    Entry point & initialization
+   Santa Zélia & São Luís Martin Edition
    =================================== */
 
 import './css/index.css';
@@ -109,6 +110,13 @@ async function init() {
   // Listen for profile changes
   window.addEventListener('profilechanged', () => {
     showNav();
+  });
+
+  // Listen for Firebase real-time updates → re-render current page
+  window.addEventListener('firebaseupdate', () => {
+    if (store.currentProfile) {
+      router._handleRoute();
+    }
   });
 
   // Register service worker

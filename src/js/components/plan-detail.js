@@ -173,10 +173,10 @@ async function openAddTaskModal(plan, container, userRole, partnerRole, partner)
 async function showPlanMenu(plan) {
   await showModal('Opções', `
     <div class="flex-col gap-sm">
-      <button class="settings-item" id="menu-delete" style="color:#ef4444">
-        <div class="settings-icon" style="background:rgba(239,68,68,0.1)">🗑️</div>
+      <button class="settings-item" id="menu-delete" style="color:#c47a6e">
+        <div class="settings-icon" style="background:rgba(196,122,110,0.1)">🗑️</div>
         <div class="settings-info">
-          <div class="settings-name" style="color:#ef4444">Excluir Plano</div>
+          <div class="settings-name" style="color:#c47a6e">Excluir Plano</div>
           <div class="settings-desc">Esta ação não pode ser desfeita</div>
         </div>
       </button>

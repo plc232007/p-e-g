@@ -1,6 +1,7 @@
 /* ===================================
    P&G — Dashboard Component
    Main home screen
+   Santa Zélia & São Luís Martin Edition
    =================================== */
 
 import { store, CATEGORIES } from '../store.js';

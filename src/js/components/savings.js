@@ -93,7 +93,7 @@ function renderTransactions(transactions) {
 
     return `
       <div class="card card-sm flex gap-base" style="align-items:center;padding:var(--space-md) var(--space-base)">
-        <div style="width:36px;height:36px;border-radius:var(--radius-md);display:flex;align-items:center;justify-content:center;font-size:1.1rem;background:${isDeposit ? 'rgba(16,185,129,0.12)' : 'rgba(239,68,68,0.12)'}">
+        <div style="width:36px;height:36px;border-radius:var(--radius-md);display:flex;align-items:center;justify-content:center;font-size:1.1rem;background:${isDeposit ? 'rgba(94,138,122,0.12)' : 'rgba(196,122,110,0.12)'}">
           ${isDeposit ? '📈' : '📉'}
         </div>
         <div style="flex:1;min-width:0">
@@ -102,7 +102,7 @@ function renderTransactions(transactions) {
           </div>
           <div class="text-xs text-muted">${profile.name} · ${dateStr} às ${timeStr}</div>
         </div>
-        <div style="font-family:var(--font-display);font-weight:var(--fw-bold);font-size:var(--fs-sm);color:${isDeposit ? '#10b981' : '#ef4444'}">
+        <div style="font-family:var(--font-display);font-weight:var(--fw-bold);font-size:var(--fs-sm);color:${isDeposit ? '#5e8a7a' : '#c47a6e'}">
           ${isDeposit ? '+' : '−'} ${formatCurrency(tx.amount)}
         </div>
       </div>

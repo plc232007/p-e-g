@@ -1,10 +1,32 @@
 /* ===================================
    P&G — Profile Selection
    Fixed Pedro & Gabi profiles
+   Santa Zélia & São Luís Martin
    =================================== */
 
 import { store, PROFILES } from '../store.js';
 import { router } from '../router.js';
+
+// App logo SVG inline
+const APP_LOGO_SVG = `
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none" width="72" height="72">
+  <defs>
+    <linearGradient id="bg-logo" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#2c3e6b"/>
+      <stop offset="100%" stop-color="#1e2d52"/>
+    </linearGradient>
+    <linearGradient id="cross-logo" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#c49a55"/>
+      <stop offset="100%" stop-color="#dab978"/>
+    </linearGradient>
+  </defs>
+  <circle cx="256" cy="256" r="240" fill="url(#bg-logo)"/>
+  <rect x="240" y="100" width="32" height="280" rx="6" fill="url(#cross-logo)"/>
+  <rect x="176" y="172" width="160" height="28" rx="6" fill="url(#cross-logo)"/>
+  <ellipse cx="216" cy="350" rx="48" ry="32" fill="none" stroke="#c49a55" stroke-width="3.5" opacity="0.7" transform="rotate(-12, 216, 350)"/>
+  <ellipse cx="296" cy="350" rx="48" ry="32" fill="none" stroke="#dab978" stroke-width="3.5" opacity="0.6" transform="rotate(12, 296, 350)"/>
+  <circle cx="256" cy="256" r="238" fill="none" stroke="rgba(196,154,85,0.15)" stroke-width="2"/>
+</svg>`;
 
 export function renderProfileSelect() {
   const div = document.createElement('div');
@@ -13,11 +35,14 @@ export function renderProfileSelect() {
 
   div.innerHTML = `
     <div style="text-align:center;margin-bottom:var(--space-2xl)">
-      <div style="font-size:2.5rem;margin-bottom:var(--space-sm)" class="heart-beat">💜</div>
+      <div style="margin-bottom:var(--space-base)">${APP_LOGO_SVG}</div>
       <h1 class="heading-lg">
         <span class="text-gradient">P&G</span>
       </h1>
-      <p class="text-secondary text-sm" style="margin-top:var(--space-sm)">Quem está acessando?</p>
+      <p class="text-secondary text-xs" style="margin-top:var(--space-xs);opacity:0.7;font-style:italic">
+        Santa Zélia e São Luís Martin, rogai por nós
+      </p>
+      <p class="text-secondary text-sm" style="margin-top:var(--space-base)">Quem está acessando?</p>
     </div>
 
     <div style="display:flex;gap:var(--space-xl);width:100%;max-width:360px;justify-content:center">
@@ -28,7 +53,7 @@ export function renderProfileSelect() {
           <div class="profile-avatar-fallback" style="display:none">P</div>
         </div>
         <div class="profile-name">Pedro</div>
-        <div class="profile-saint text-xs text-muted">São José</div>
+        <div class="profile-saint text-xs text-muted">São Luís Martin</div>
       </div>
 
       <!-- Gabi -->
@@ -38,7 +63,7 @@ export function renderProfileSelect() {
           <div class="profile-avatar-fallback" style="display:none">G</div>
         </div>
         <div class="profile-name">Gabi</div>
-        <div class="profile-saint text-xs text-muted">Nossa Senhora</div>
+        <div class="profile-saint text-xs text-muted">Santa Zélia</div>
       </div>
     </div>
 
@@ -62,8 +87,8 @@ export function renderProfileSelect() {
 
       .profile-card:hover {
         transform: translateY(-4px) scale(1.03);
-        border-color: rgba(124, 58, 237, 0.4);
-        box-shadow: 0 12px 40px rgba(124, 58, 237, 0.2);
+        border-color: rgba(44, 62, 107, 0.4);
+        box-shadow: 0 12px 40px rgba(44, 62, 107, 0.2);
       }
 
       .profile-card:active {
@@ -81,11 +106,11 @@ export function renderProfileSelect() {
       }
 
       .profile-card:hover .profile-avatar-wrapper {
-        border-color: #7c3aed;
+        border-color: #2c3e6b;
       }
 
       .profile-card[data-role="user2"]:hover .profile-avatar-wrapper {
-        border-color: #ec4899;
+        border-color: #c49a55;
       }
 
       .profile-avatar-img {
@@ -111,7 +136,7 @@ export function renderProfileSelect() {
       }
 
       .profile-card[data-role="user2"] .profile-avatar-fallback {
-        background: linear-gradient(135deg, #ec4899, #f59e0b);
+        background: var(--gradient-warm);
       }
 
       .profile-name {

@@ -31,8 +31,8 @@ export function createProgressRing(percent, size = 48, strokeWidth = 4) {
       <svg class="progress-ring" width="${size}" height="${size}">
         <defs>
           <linearGradient id="${gradientId}" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" style="stop-color:#7c3aed" />
-            <stop offset="100%" style="stop-color:#ec4899" />
+            <stop offset="0%" style="stop-color:#2c3e6b" />
+            <stop offset="100%" style="stop-color:#7b8ec4" />
           </linearGradient>
         </defs>
         <circle class="progress-ring-bg" cx="${size/2}" cy="${size/2}" r="${radius}" stroke-width="${strokeWidth}" />
@@ -81,7 +81,7 @@ export function triggerConfetti() {
   canvas.height = window.innerHeight;
 
   const particles = [];
-  const colors = ['#7c3aed', '#ec4899', '#f59e0b', '#10b981', '#3b82f6', '#ef4444'];
+  const colors = ['#2c3e6b', '#c49a55', '#7b8ec4', '#5e8a7a', '#6a9dba', '#9b7db8'];
 
   for (let i = 0; i < 60; i++) {
     particles.push({

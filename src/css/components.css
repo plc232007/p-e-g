@@ -1,6 +1,7 @@
 /* ===================================
-   NósJuntos — Component Styles
+   P&G — Component Styles
    Cards, Buttons, Inputs, etc.
+   Santa Zélia & São Luís Martin Edition
    =================================== */
 
 /* ===== Glass Card ===== */
@@ -75,10 +76,10 @@
 }
 
 .category-card[data-category="reading"]::before { background: var(--gradient-warm); }
-.category-card[data-category="food"]::before { background: linear-gradient(90deg, var(--color-food), #34d399); }
+.category-card[data-category="food"]::before { background: linear-gradient(90deg, var(--color-food), #7aab9a); }
 .category-card[data-category="prayer"]::before { background: var(--gradient-cool); }
-.category-card[data-category="exercise"]::before { background: linear-gradient(90deg, var(--color-exercise), #f97316); }
-.category-card[data-category="finance"]::before { background: linear-gradient(90deg, var(--color-finance), #06b6d4); }
+.category-card[data-category="exercise"]::before { background: linear-gradient(90deg, var(--color-exercise), #d4938a); }
+.category-card[data-category="finance"]::before { background: linear-gradient(90deg, var(--color-finance), #88b8d4); }
 .category-card[data-category="custom"]::before { background: var(--gradient-primary); }
 
 .category-icon {
@@ -148,11 +149,11 @@
 .btn-primary {
   background: var(--gradient-primary);
   color: #fff;
-  box-shadow: 0 4px 15px rgba(124, 58, 237, 0.3);
+  box-shadow: 0 4px 15px rgba(44, 62, 107, 0.3);
 }
 
 .btn-primary:hover {
-  box-shadow: 0 6px 25px rgba(124, 58, 237, 0.4);
+  box-shadow: 0 6px 25px rgba(44, 62, 107, 0.4);
   transform: translateY(-1px);
 }
 
@@ -206,7 +207,7 @@
 }
 
 .btn-danger {
-  background: linear-gradient(135deg, #ef4444, #dc2626);
+  background: linear-gradient(135deg, #c47a6e, #b0635a);
   color: #fff;
 }
 
@@ -234,8 +235,8 @@
 }
 
 .input:focus {
-  border-color: #7c3aed;
-  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.15);
+  border-color: #2c3e6b;
+  box-shadow: 0 0 0 3px rgba(44, 62, 107, 0.15);
 }
 
 .input::placeholder {
@@ -329,7 +330,7 @@
 }
 
 .partner-dot.completed {
-  background: #10b981;
+  background: #5e8a7a;
   opacity: 1;
   animation: dotPulse 600ms var(--ease-spring);
 }
@@ -419,21 +420,21 @@
 }
 
 .badge-primary {
-  background: rgba(124, 58, 237, 0.15);
-  border-color: rgba(124, 58, 237, 0.3);
-  color: #a78bfa;
+  background: rgba(44, 62, 107, 0.15);
+  border-color: rgba(44, 62, 107, 0.3);
+  color: var(--color-primary-light);
 }
 
 .badge-success {
-  background: rgba(16, 185, 129, 0.15);
-  border-color: rgba(16, 185, 129, 0.3);
-  color: #34d399;
+  background: rgba(94, 138, 122, 0.15);
+  border-color: rgba(94, 138, 122, 0.3);
+  color: #7aab9a;
 }
 
 .badge-warning {
-  background: rgba(245, 158, 11, 0.15);
-  border-color: rgba(245, 158, 11, 0.3);
-  color: #fbbf24;
+  background: rgba(196, 154, 85, 0.15);
+  border-color: rgba(196, 154, 85, 0.3);
+  color: #c49a55;
 }
 
 /* ===== Streak Counter ===== */
@@ -443,12 +444,12 @@
   gap: var(--space-xs);
   padding: 0.35rem 0.75rem;
   border-radius: var(--radius-full);
-  background: linear-gradient(135deg, rgba(245, 158, 11, 0.15), rgba(239, 68, 68, 0.15));
-  border: 1px solid rgba(245, 158, 11, 0.25);
+  background: linear-gradient(135deg, rgba(196, 154, 85, 0.15), rgba(196, 122, 110, 0.12));
+  border: 1px solid rgba(196, 154, 85, 0.25);
   font-family: var(--font-display);
   font-weight: var(--fw-bold);
   font-size: var(--fs-sm);
-  color: #fbbf24;
+  color: #c49a55;
 }
 
 .streak-badge .streak-fire {
@@ -487,7 +488,7 @@
 }
 
 .nav-item.active {
-  color: #a78bfa;
+  color: var(--color-primary-light);
 }
 
 .nav-item.active::before {
@@ -665,7 +666,7 @@
 
 .section-action {
   font-size: var(--fs-sm);
-  color: #a78bfa;
+  color: var(--color-primary-light);
   font-weight: var(--fw-medium);
   cursor: pointer;
   transition: opacity var(--transition-fast);
@@ -696,10 +697,10 @@
   transition: background var(--transition-fast);
 }
 
-.heatmap-cell.level-1 { background: rgba(124, 58, 237, 0.2); }
-.heatmap-cell.level-2 { background: rgba(124, 58, 237, 0.4); }
-.heatmap-cell.level-3 { background: rgba(124, 58, 237, 0.6); }
-.heatmap-cell.level-4 { background: rgba(124, 58, 237, 0.85); }
+.heatmap-cell.level-1 { background: rgba(44, 62, 107, 0.2); }
+.heatmap-cell.level-2 { background: rgba(44, 62, 107, 0.4); }
+.heatmap-cell.level-3 { background: rgba(44, 62, 107, 0.6); }
+.heatmap-cell.level-4 { background: rgba(44, 62, 107, 0.85); }
 
 /* ===== Weekly Chart ===== */
 .weekly-chart {
@@ -752,29 +753,34 @@
 /* ===== FAB (Floating Action Button) ===== */
 .fab {
   position: fixed;
-  bottom: calc(var(--nav-height) + var(--safe-bottom) + var(--space-base));
-  right: var(--space-base);
-  width: 56px;
-  height: 56px;
+  bottom: calc(var(--nav-height) + var(--safe-bottom) + var(--space-lg));
+  right: 1.25rem;
+  left: auto;
+  width: 52px;
+  height: 52px;
   border-radius: var(--radius-full);
   background: var(--gradient-primary);
   color: #fff;
   font-size: 1.5rem;
+  font-weight: var(--fw-light);
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 6px 20px rgba(124, 58, 237, 0.4);
-  z-index: var(--z-base);
+  box-shadow: 0 4px 16px rgba(44, 62, 107, 0.35);
+  z-index: var(--z-fab);
   transition: all var(--transition-spring);
+  line-height: 1;
+  inset-inline-start: auto;
+  inset-inline-end: 1.25rem;
 }
 
 .fab:hover {
-  transform: scale(1.08);
-  box-shadow: 0 8px 30px rgba(124, 58, 237, 0.5);
+  transform: scale(1.08) translateY(-2px);
+  box-shadow: 0 6px 24px rgba(44, 62, 107, 0.45);
 }
 
 .fab:active {
-  transform: scale(0.95);
+  transform: scale(0.94);
 }
 
 /* ===== Settings Item ===== */

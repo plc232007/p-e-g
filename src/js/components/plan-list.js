@@ -30,11 +30,26 @@ export function renderPlanList(params = {}) {
     </div>
   `;
 
+  // FAB — append to body for correct fixed positioning
+  const existingFab = document.getElementById('add-plan-fab');
+  if (existingFab) existingFab.remove();
+
   const fab = document.createElement('button');
   fab.className = 'fab ripple';
   fab.id = 'add-plan-fab';
   fab.textContent = '+';
-  div.appendChild(fab);
+  fab.style.cssText = 'position:fixed;right:1.25rem;left:auto;bottom:calc(4.25rem + env(safe-area-inset-bottom, 0px) + 1.5rem);';
+  document.body.appendChild(fab);
+
+  // Cleanup FAB on route change (only when leaving /plans)
+  const cleanupFab = (e) => {
+    const newRoute = e?.detail?.route || '';
+    // Keep FAB alive if navigating within /plans (e.g. filter change)
+    if (newRoute === '/plans') return;
+    fab.remove();
+    window.removeEventListener('routechange', cleanupFab);
+  };
+  window.addEventListener('routechange', cleanupFab);
 
   setTimeout(() => {
     div.querySelector('#plans-back')?.addEventListener('click', () => router.navigate('/plans'));

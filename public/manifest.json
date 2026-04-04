@@ -1,11 +1,11 @@
 {
   "name": "P&G — Pedro & Gabi",
   "short_name": "P&G",
-  "description": "Acompanhem planos de oração, leitura, alimentação e poupança juntos.",
+  "description": "Acompanhem planos de oração, leitura, alimentação e poupança juntos. Santa Zélia e São Luís Martin, rogai por nós.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#07070d",
-  "theme_color": "#7c3aed",
+  "background_color": "#0d1117",
+  "theme_color": "#2c3e6b",
   "orientation": "portrait",
   "icons": [
     {
