@@ -49,24 +49,28 @@ const coupleRef = doc(db, 'couples', COUPLE_DOC_ID);
 export async function saveToFirestore(data) {
   try {
     const clean = JSON.parse(JSON.stringify(data));
+    // Remove local-only fields that shouldn't sync
+    delete clean.theme;
     await setDoc(coupleRef, {
       ...clean,
       updatedAt: Date.now(),
-    }, { merge: true });
+    });
+    console.log('[Firebase] Saved to Firestore');
   } catch (err) {
-    console.warn('Firestore save:', err.message);
+    console.warn('[Firebase] Save error:', err.message);
   }
 }
 
-// === Load state from Firestore (with timeout) ===
+// === Load state from Firestore ===
 export async function loadFromFirestore() {
   try {
     const snapshot = await getDoc(coupleRef);
     if (snapshot.exists()) {
+      console.log('[Firebase] Loaded from Firestore');
       return snapshot.data();
     }
   } catch (err) {
-    console.warn('Firestore load:', err.message);
+    console.warn('[Firebase] Load error:', err.message);
   }
   return null;
 }
@@ -78,13 +82,14 @@ export function listenForChanges(callback) {
       if (snapshot.exists()) {
         const data = snapshot.data();
         const source = snapshot.metadata.hasPendingWrites ? 'local' : 'server';
+        console.log(`[Firebase] onSnapshot (${source})`, new Date().toLocaleTimeString());
         callback(data, source);
       }
     }, (err) => {
-      console.warn('Firestore listener:', err.message);
+      console.error('[Firebase] Listener error:', err.message);
     });
   } catch (err) {
-    console.warn('Firestore setup:', err.message);
+    console.warn('[Firebase] Listener setup error:', err.message);
     return () => {};
   }
 }

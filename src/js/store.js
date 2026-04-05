@@ -106,8 +106,10 @@ class Store {
   constructor() {
     this._state = this._loadLocal();
     this._listeners = new Map();
-    this._syncing = false;
     this._unsubscribe = null;
+    this._pushTimer = null;      // Debounce timer for Firestore pushes
+    this._lastPushTime = 0;      // Timestamp of last push
+    this._ignoreNextSnapshot = false; // Skip the snapshot we just caused
   }
 
   // Load from local cache
@@ -135,46 +137,73 @@ class Store {
   // Initialize Firebase sync (non-blocking, with timeout)
   async initSync() {
     try {
-      // Race: load from Firestore with a 4s timeout
+      // Race: load from Firestore with a 5s timeout
       const remote = await Promise.race([
         loadFromFirestore(),
-        new Promise((resolve) => setTimeout(() => resolve(null), 4000)),
+        new Promise((resolve) => setTimeout(() => resolve(null), 5000)),
       ]);
 
       if (remote) {
+        // Merge remote data with defaults (remote wins)
         this._state = { ...getDefaultState(), ...remote };
         this._saveLocal();
         this._notifyAll();
+        console.log('[Store] Synced from Firestore');
       } else {
         // First time or timeout: push local state
-        this._pushToFirestore(); // fire-and-forget
+        console.log('[Store] No remote data, pushing local');
+        this._pushToFirestoreNow();
       }
     } catch (err) {
-      console.warn('initSync failed, using local data:', err);
+      console.warn('[Store] initSync failed, using local data:', err);
     }
 
-    // Listen for real-time changes (fire-and-forget, won't block)
+    // Listen for real-time changes
     try {
       this._unsubscribe = listenForChanges((data, source) => {
-        if (source === 'server' && !this._syncing) {
-          this._state = { ...this._state, ...data };
-          this._saveLocal();
-          this._notifyAll();
-          // Re-render current page if visible
-          window.dispatchEvent(new CustomEvent('firebaseupdate'));
+        if (source === 'server') {
+          console.log('[Store] Received server update');
+          // Deep-compare updatedAt to avoid echo from our own writes
+          const remoteTime = data.updatedAt || 0;
+          const localTime = this._lastPushTime || 0;
+          
+          // Only apply if the remote update is newer than our last push
+          // (with a 2s grace window to account for network latency)
+          if (remoteTime > localTime + 2000 || remoteTime < localTime - 2000) {
+            // This is from the other device — apply it
+            const savedTheme = this._state.theme; // preserve local-only settings
+            this._state = { ...getDefaultState(), ...data };
+            if (savedTheme) this._state.theme = savedTheme;
+            this._saveLocal();
+            this._notifyAll();
+            // Re-render current page
+            window.dispatchEvent(new CustomEvent('firebaseupdate'));
+            console.log('[Store] Applied server update & re-rendered');
+          } else {
+            console.log('[Store] Skipped echo of own write');
+          }
         }
       });
     } catch (err) {
-      console.warn('Firestore listener failed:', err);
+      console.warn('[Store] Firestore listener failed:', err);
     }
   }
 
-  async _pushToFirestore() {
-    this._syncing = true;
+  // Debounced push to Firestore (300ms)
+  _pushToFirestore() {
+    clearTimeout(this._pushTimer);
+    this._pushTimer = setTimeout(() => {
+      this._pushToFirestoreNow();
+    }, 300);
+  }
+
+  // Immediate push to Firestore
+  async _pushToFirestoreNow() {
+    this._lastPushTime = Date.now();
     try {
       await saveToFirestore(this._state);
-    } finally {
-      this._syncing = false;
+    } catch (err) {
+      console.warn('[Store] Push error:', err);
     }
   }
 
@@ -305,8 +334,8 @@ class Store {
     }
     if (!this._state.history) this._state.history = {};
     this._state.history[today] = { ...this._state.history[today], [`${role}Count`]: completedToday };
+    // Note: no extra _pushToFirestore here — toggleItem already pushes
     this._saveLocal();
-    this._pushToFirestore();
   }
 
   getPlanProgress(planId, userRole) {
@@ -417,7 +446,7 @@ class Store {
     localStorage.removeItem(LOCAL_CACHE_KEY);
     localStorage.removeItem(LOCAL_PROFILE_KEY);
     this._state = getDefaultState();
-    this._pushToFirestore();
+    this._pushToFirestoreNow(); // immediate push
     this._notifyAll();
   }
 }
