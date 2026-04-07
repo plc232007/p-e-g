@@ -1,5 +1,6 @@
 /* ===================================
    P&G — Plan List Component
+   Category filter & plan creation
    =================================== */
 
 import { store, CATEGORIES } from '../store.js';
@@ -41,10 +42,9 @@ export function renderPlanList(params = {}) {
   fab.style.cssText = 'position:fixed;right:1.25rem;left:auto;bottom:calc(4.25rem + env(safe-area-inset-bottom, 0px) + 1.5rem);';
   document.body.appendChild(fab);
 
-  // Cleanup FAB on route change (only when leaving /plans)
+  // Cleanup FAB on route change
   const cleanupFab = (e) => {
     const newRoute = e?.detail?.route || '';
-    // Keep FAB alive if navigating within /plans (e.g. filter change)
     if (newRoute === '/plans') return;
     fab.remove();
     window.removeEventListener('routechange', cleanupFab);

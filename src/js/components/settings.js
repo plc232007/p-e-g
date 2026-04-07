@@ -6,7 +6,6 @@ import { store } from '../store.js';
 import { showToast, showModal } from '../ui.js';
 import { router } from '../router.js';
 
-// Inline logo for About section
 const ABOUT_LOGO = `
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none" width="48" height="48" style="margin:0 auto">
   <defs>
@@ -44,12 +43,8 @@ export function renderSettings() {
     <!-- Profile Card -->
     <div class="card" style="margin-bottom:var(--space-lg);text-align:center">
       <div class="avatar-pair" style="justify-content:center;margin-bottom:var(--space-base)">
-        <div class="avatar avatar-xl" style="overflow:hidden;padding:0">
-          <img src="${user.avatar}" alt="${user.name}" style="width:100%;height:100%;object-fit:cover" onerror="this.outerHTML='${user.name[0]}'" />
-        </div>
-        <div class="avatar avatar-xl" style="background:var(--gradient-warm);overflow:hidden;padding:0;margin-left:-12px;border:3px solid var(--bg-primary)">
-          <img src="${partner.avatar}" alt="${partner.name}" style="width:100%;height:100%;object-fit:cover" onerror="this.outerHTML='${partner.name[0]}'" />
-        </div>
+        <div class="avatar avatar-xl" style="overflow:hidden;padding:0" id="settings-user-avatar"></div>
+        <div class="avatar avatar-xl" style="background:var(--gradient-warm);overflow:hidden;padding:0;margin-left:-12px;border:3px solid var(--bg-primary)" id="settings-partner-avatar"></div>
       </div>
       <div class="heading-sm">${user.name} & ${partner.name}</div>
       <div class="text-sm text-secondary" style="margin-top:4px">
@@ -96,9 +91,9 @@ export function renderSettings() {
     <div class="card" style="text-align:center">
       <div style="margin-bottom:var(--space-sm)">${ABOUT_LOGO}</div>
       <div class="heading-sm"><span class="text-gradient">P&G</span></div>
-      <div class="text-sm text-muted" style="margin-top:4px">v2.1.0 · Feito com amor</div>
+      <div class="text-xs text-muted" style="margin-top:4px">v2.3.0 · Feito com amor</div>
       <div class="text-xs text-muted" style="margin-top:var(--space-sm)">
-        Pedro & Gabi · Cresçam juntos em fé, saúde e amor
+        Pedro & Gabi · Cresçam juntos em fé e amor
       </div>
       <div class="text-xs text-secondary" style="margin-top:var(--space-xs);font-style:italic;opacity:0.7">
         Santa Zélia e São Luís Martin, rogai por nós ✝️
@@ -108,6 +103,10 @@ export function renderSettings() {
       </div>
     </div>
   `;
+
+  // Inject avatars safely via DOM
+  _injectAvatar(div.querySelector('#settings-user-avatar'), user);
+  _injectAvatar(div.querySelector('#settings-partner-avatar'), partner);
 
   setTimeout(() => {
     // Theme toggle
@@ -119,7 +118,7 @@ export function renderSettings() {
       showToast(newTheme === 'dark' ? 'Modo escuro 🌙' : 'Modo claro ☀️');
     });
 
-    // Switch profile → go back to profile selection
+    // Switch profile
     div.querySelector('#setting-switch-profile')?.addEventListener('click', () => {
       localStorage.removeItem('pg_current_profile');
       router.navigate('/profile');
@@ -153,4 +152,17 @@ export function renderSettings() {
   }, 100);
 
   return div;
+}
+
+function _injectAvatar(container, profile) {
+  if (!container) return;
+  const img = document.createElement('img');
+  img.src = profile.avatar;
+  img.alt = profile.name;
+  img.style.cssText = 'width:100%;height:100%;object-fit:cover';
+  img.onerror = () => {
+    container.textContent = profile.name[0];
+    img.remove();
+  };
+  container.appendChild(img);
 }

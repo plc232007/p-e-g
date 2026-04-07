@@ -9,17 +9,15 @@ const LOCAL_PROFILE_KEY = 'pg_current_profile';
 const LOCAL_CACHE_KEY = 'pg_data_cache';
 
 // Fixed profiles
-const PROFILES = {
+export const PROFILES = {
   user1: { name: 'Pedro', avatar: '/images/pedro.png', role: 'user1' },
   user2: { name: 'Gabi', avatar: '/images/gabi.png', role: 'user2' },
 };
 
-// Default categories
-const CATEGORIES = [
+// Main categories — focused on Oração and Leitura
+export const CATEGORIES = [
   { id: 'prayer', name: 'Oração', icon: '🙏', color: 'prayer' },
   { id: 'reading', name: 'Leitura', icon: '📖', color: 'reading' },
-  { id: 'food', name: 'Alimentação', icon: '🍽️', color: 'food' },
-  { id: 'exercise', name: 'Exercícios', icon: '💪', color: 'exercise' },
   { id: 'custom', name: 'Personalizado', icon: '✨', color: 'custom' },
 ];
 
@@ -68,28 +66,11 @@ const DEFAULT_PLANS = [
     ],
     createdAt: Date.now(),
   },
-  {
-    id: 'cardapio-semanal',
-    categoryId: 'food',
-    title: 'Cardápio Saudável Semanal',
-    description: 'Planejem e sigam um cardápio saudável juntos',
-    icon: '🥗',
-    items: [
-      { id: 'f1', title: 'Segunda — Preparar marmita', user1: false, user2: false },
-      { id: 'f2', title: 'Terça — Cozinhar receita nova', user1: false, user2: false },
-      { id: 'f3', title: 'Quarta — Dia de salada', user1: false, user2: false },
-      { id: 'f4', title: 'Quinta — Receita fit juntos', user1: false, user2: false },
-      { id: 'f5', title: 'Sexta — Jantar especial saudável', user1: false, user2: false },
-      { id: 'f6', title: 'Sábado — Feira / Compras da semana', user1: false, user2: false },
-      { id: 'f7', title: 'Domingo — Almoço em família', user1: false, user2: false },
-    ],
-    createdAt: Date.now(),
-  },
 ];
 
 function getDefaultState() {
   return {
-    plans: [...DEFAULT_PLANS.map(p => ({ ...p, items: p.items.map(i => ({ ...i })) }))],
+    plans: DEFAULT_PLANS.map(p => ({ ...p, items: p.items.map(i => ({ ...i })) })),
     savings: {
       total: 0,
       goal: null,
@@ -107,12 +88,24 @@ class Store {
     this._state = this._loadLocal();
     this._listeners = new Map();
     this._unsubscribe = null;
-    this._pushTimer = null;      // Debounce timer for Firestore pushes
-    this._lastPushTime = 0;      // Timestamp of last push
-    this._ignoreNextSnapshot = false; // Skip the snapshot we just caused
+    this._pushTimer = null;
+    this._lastWriteId = null;
+    this._deviceId = this._getDeviceId();
   }
 
-  // Load from local cache
+  // ─── Device Identity ────────────────────────────────────────────────────────
+
+  _getDeviceId() {
+    let id = localStorage.getItem('pg_device_id');
+    if (!id) {
+      id = `device_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+      localStorage.setItem('pg_device_id', id);
+    }
+    return id;
+  }
+
+  // ─── Local Cache ─────────────────────────────────────────────────────────────
+
   _loadLocal() {
     try {
       const raw = localStorage.getItem(LOCAL_CACHE_KEY);
@@ -121,7 +114,7 @@ class Store {
         return { ...getDefaultState(), ...saved };
       }
     } catch (e) {
-      console.error('Local cache load error:', e);
+      console.error('[Store] Local cache load error:', e);
     }
     return getDefaultState();
   }
@@ -130,27 +123,25 @@ class Store {
     try {
       localStorage.setItem(LOCAL_CACHE_KEY, JSON.stringify(this._state));
     } catch (e) {
-      console.error('Local cache save error:', e);
+      console.error('[Store] Local cache save error:', e);
     }
   }
 
-  // Initialize Firebase sync (non-blocking, with timeout)
+  // ─── Firebase Sync ───────────────────────────────────────────────────────────
+
   async initSync() {
     try {
-      // Race: load from Firestore with a 5s timeout
       const remote = await Promise.race([
         loadFromFirestore(),
-        new Promise((resolve) => setTimeout(() => resolve(null), 5000)),
+        new Promise(resolve => setTimeout(() => resolve(null), 5000)),
       ]);
 
       if (remote) {
-        // Merge remote data with defaults (remote wins)
         this._state = { ...getDefaultState(), ...remote };
         this._saveLocal();
         this._notifyAll();
         console.log('[Store] Synced from Firestore');
       } else {
-        // First time or timeout: push local state
         console.log('[Store] No remote data, pushing local');
         this._pushToFirestoreNow();
       }
@@ -161,57 +152,50 @@ class Store {
     // Listen for real-time changes
     try {
       this._unsubscribe = listenForChanges((data, source) => {
-        if (source === 'server') {
-          console.log('[Store] Received server update');
-          // Deep-compare updatedAt to avoid echo from our own writes
-          const remoteTime = data.updatedAt || 0;
-          const localTime = this._lastPushTime || 0;
-          
-          // Only apply if the remote update is newer than our last push
-          // (with a 2s grace window to account for network latency)
-          if (remoteTime > localTime + 2000 || remoteTime < localTime - 2000) {
-            // This is from the other device — apply it
-            const savedTheme = this._state.theme; // preserve local-only settings
-            this._state = { ...getDefaultState(), ...data };
-            if (savedTheme) this._state.theme = savedTheme;
-            this._saveLocal();
-            this._notifyAll();
-            // Re-render current page
-            window.dispatchEvent(new CustomEvent('firebaseupdate'));
-            console.log('[Store] Applied server update & re-rendered');
-          } else {
-            console.log('[Store] Skipped echo of own write');
-          }
+        if (source !== 'server') return;
+
+        const remoteWriteId = data._writeId || null;
+        if (remoteWriteId && remoteWriteId === this._lastWriteId) {
+          console.log('[Store] Skipped echo of own write');
+          return;
         }
+
+        console.log(`[Store] Received update from device: ${data._deviceId || 'unknown'}`);
+        const savedTheme = this._state.theme;
+        this._state = { ...getDefaultState(), ...data };
+        if (savedTheme) this._state.theme = savedTheme;
+        delete this._state._writeId;
+        delete this._state._deviceId;
+        this._saveLocal();
+        this._notifyAll();
+        window.dispatchEvent(new CustomEvent('firebaseupdate'));
+        console.log('[Store] Applied server update & re-rendered');
       });
     } catch (err) {
       console.warn('[Store] Firestore listener failed:', err);
     }
   }
 
-  // Debounced push to Firestore (300ms)
   _pushToFirestore() {
     clearTimeout(this._pushTimer);
-    this._pushTimer = setTimeout(() => {
-      this._pushToFirestoreNow();
-    }, 300);
+    this._pushTimer = setTimeout(() => this._pushToFirestoreNow(), 300);
   }
 
-  // Immediate push to Firestore
   async _pushToFirestoreNow() {
-    this._lastPushTime = Date.now();
+    this._lastWriteId = `w_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
     try {
-      await saveToFirestore(this._state);
+      await saveToFirestore(this._state, this._lastWriteId, this._deviceId);
     } catch (err) {
       console.warn('[Store] Push error:', err);
     }
   }
 
+  // ─── State Access ─────────────────────────────────────────────────────────────
+
   get state() {
     return this._state;
   }
 
-  // Current profile (stored per-device in localStorage)
   get currentProfile() {
     return localStorage.getItem(LOCAL_PROFILE_KEY) || null;
   }
@@ -235,7 +219,8 @@ class Store {
     return this.currentProfile === 'user1' ? 'user2' : 'user1';
   }
 
-  // === Reactive updates ===
+  // ─── Reactivity ──────────────────────────────────────────────────────────────
+
   set(key, value) {
     this._state[key] = value;
     this._saveLocal();
@@ -269,7 +254,8 @@ class Store {
     }
   }
 
-  // === Plan helpers ===
+  // ─── Plan Helpers ─────────────────────────────────────────────────────────────
+
   getPlans(categoryId) {
     if (categoryId) return this._state.plans.filter(p => p.categoryId === categoryId);
     return this._state.plans;
@@ -290,6 +276,19 @@ class Store {
     return plan;
   }
 
+  updatePlan(planId, updates) {
+    const plan = this.getPlan(planId);
+    if (!plan) return null;
+    if (updates.title !== undefined) plan.title = updates.title;
+    if (updates.description !== undefined) plan.description = updates.description;
+    if (updates.icon !== undefined) plan.icon = updates.icon;
+    if (updates.categoryId !== undefined) plan.categoryId = updates.categoryId;
+    this._saveLocal();
+    this._pushToFirestore();
+    this._notify('plans');
+    return plan;
+  }
+
   deletePlan(planId) {
     this._state.plans = this._state.plans.filter(p => p.id !== planId);
     this._saveLocal();
@@ -299,7 +298,7 @@ class Store {
 
   addPlanItem(planId, item) {
     const plan = this.getPlan(planId);
-    if (!plan) return;
+    if (!plan) return null;
     item.id = item.id || `item_${Date.now()}`;
     item.user1 = false;
     item.user2 = false;
@@ -308,6 +307,27 @@ class Store {
     this._pushToFirestore();
     this._notify('plans');
     return item;
+  }
+
+  updatePlanItem(planId, itemId, updates) {
+    const plan = this.getPlan(planId);
+    if (!plan) return null;
+    const item = plan.items.find(i => i.id === itemId);
+    if (!item) return null;
+    if (updates.title !== undefined) item.title = updates.title;
+    this._saveLocal();
+    this._pushToFirestore();
+    this._notify('plans');
+    return item;
+  }
+
+  deletePlanItem(planId, itemId) {
+    const plan = this.getPlan(planId);
+    if (!plan) return;
+    plan.items = plan.items.filter(i => i.id !== itemId);
+    this._saveLocal();
+    this._pushToFirestore();
+    this._notify('plans');
   }
 
   toggleItem(planId, itemId, userRole) {
@@ -333,24 +353,27 @@ class Store {
       }
     }
     if (!this._state.history) this._state.history = {};
-    this._state.history[today] = { ...this._state.history[today], [`${role}Count`]: completedToday };
-    // Note: no extra _pushToFirestore here — toggleItem already pushes
+    this._state.history[today] = {
+      ...this._state.history[today],
+      [`${role}Count`]: completedToday,
+    };
     this._saveLocal();
   }
+
+  // ─── Progress Helpers ─────────────────────────────────────────────────────────
 
   getPlanProgress(planId, userRole) {
     const plan = this.getPlan(planId);
     if (!plan || plan.items.length === 0) return 0;
     const role = userRole || this.currentProfile || 'user1';
-    const completed = plan.items.filter(i => i[role]).length;
-    return Math.round((completed / plan.items.length) * 100);
+    return Math.round((plan.items.filter(i => i[role]).length / plan.items.length) * 100);
   }
 
   getCategoryProgress(categoryId, userRole) {
     const plans = this.getPlans(categoryId);
     if (plans.length === 0) return 0;
-    let total = 0, completed = 0;
     const role = userRole || this.currentProfile || 'user1';
+    let total = 0, completed = 0;
     for (const plan of plans) {
       total += plan.items.length;
       completed += plan.items.filter(i => i[role]).length;
@@ -378,14 +401,11 @@ class Store {
   }
 
   getTotalItems() {
-    let total = 0;
-    for (const plan of this._state.plans) {
-      total += plan.items.length;
-    }
-    return total;
+    return this._state.plans.reduce((sum, plan) => sum + plan.items.length, 0);
   }
 
-  // === Savings ===
+  // ─── Savings ───────────────────────────────────────────────────────────────────
+
   getSavings() {
     return this._state.savings || { total: 0, goal: null, goalDescription: '', transactions: [] };
   }
@@ -397,7 +417,7 @@ class Store {
     const tx = {
       id: `tx_${Date.now()}`,
       amount: Math.abs(amount),
-      type, // 'deposit' or 'withdrawal'
+      type,
       description,
       who: this.currentProfile || 'user1',
       date: new Date().toISOString(),
@@ -425,31 +445,30 @@ class Store {
     this._notify('savings');
   }
 
-  // === Streak ===
+  // ─── Streak ───────────────────────────────────────────────────────────────────
+
   updateStreak() {
     const today = new Date().toISOString().slice(0, 10);
     if (this._state.lastActiveDate === today) return;
     const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
-    if (this._state.lastActiveDate === yesterday) {
-      this._state.streak = (this._state.streak || 0) + 1;
-    } else if (this._state.lastActiveDate !== today) {
-      this._state.streak = 1;
-    }
+    this._state.streak = this._state.lastActiveDate === yesterday
+      ? (this._state.streak || 0) + 1
+      : 1;
     this._state.lastActiveDate = today;
     this._saveLocal();
     this._pushToFirestore();
     this._notify('streak');
   }
 
-  // === Reset ===
+  // ─── Reset ────────────────────────────────────────────────────────────────────
+
   resetAll() {
     localStorage.removeItem(LOCAL_CACHE_KEY);
     localStorage.removeItem(LOCAL_PROFILE_KEY);
     this._state = getDefaultState();
-    this._pushToFirestoreNow(); // immediate push
+    this._pushToFirestoreNow();
     this._notifyAll();
   }
 }
 
 export const store = new Store();
-export { CATEGORIES, PROFILES };

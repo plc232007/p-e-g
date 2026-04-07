@@ -21,7 +21,8 @@ import { renderProgress } from './js/components/progress.js';
 import { renderSettings } from './js/components/settings.js';
 import { renderSavings } from './js/components/savings.js';
 
-// === Initialize App ===
+// ─── App Initialization ───────────────────────────────────────────────────────
+
 async function init() {
   const app = document.getElementById('app');
 
@@ -38,17 +39,17 @@ async function init() {
   confettiCanvas.id = 'confetti-canvas';
   document.body.appendChild(confettiCanvas);
 
-  // Initialize Firebase sync
+  // Initialize Firebase sync (non-blocking)
   try {
     await store.initSync();
   } catch (err) {
-    console.warn('Firebase sync init failed, using local data:', err);
+    console.warn('[App] Firebase sync init failed, using local data:', err);
   }
 
-  // Check if profile is selected
   const hasProfile = store.currentProfile !== null;
 
-  // Register routes
+  // ─── Route Registration ──────────────────────────────────────────────────────
+
   router.register('/profile', () => {
     hideNav();
     return renderProfileSelect();
@@ -90,33 +91,24 @@ async function init() {
     return renderSettings();
   });
 
-  // Initialize router
+  // ─── Start Router ────────────────────────────────────────────────────────────
+
   router.init('page-content');
 
   // Bottom navigation
   const nav = renderBottomNav();
   app.appendChild(nav);
 
-  // Hide nav if no profile selected
-  if (!hasProfile) {
-    hideNav();
-  }
+  if (!hasProfile) hideNav();
 
-  // Update streak
-  if (hasProfile) {
-    store.updateStreak();
-  }
+  if (hasProfile) store.updateStreak();
 
-  // Listen for profile changes
-  window.addEventListener('profilechanged', () => {
-    showNav();
-  });
+  // ─── Event Listeners ──────────────────────────────────────────────────────────
 
-  // Listen for Firebase real-time updates → re-render current page
+  window.addEventListener('profilechanged', showNav);
+
   window.addEventListener('firebaseupdate', () => {
-    if (store.currentProfile) {
-      router._handleRoute();
-    }
+    if (store.currentProfile) router._handleRoute();
   });
 
   // Register service worker
@@ -137,5 +129,5 @@ function hideNav() {
   if (nav) nav.style.display = 'none';
 }
 
-// Boot
+// ─── Boot ─────────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', init);

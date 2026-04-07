@@ -17,13 +17,13 @@ export function renderDashboard() {
   const greeting = getGreeting();
   const userRole = user.role;
   const partnerRole = store.getPartnerRole();
-
   const userProgress = store.getOverallProgress(userRole);
   const partnerProgress = store.getOverallProgress(partnerRole);
   const streak = store.state.streak || 0;
 
   const div = document.createElement('div');
   div.className = 'page-container';
+
   div.innerHTML = `
     <!-- Header -->
     <div class="flex-between" style="margin-bottom:var(--space-lg);padding-top:var(--space-sm)">
@@ -39,12 +39,8 @@ export function renderDashboard() {
           </div>
         ` : ''}
         <div class="avatar-pair">
-          <div class="avatar" style="overflow:hidden;padding:0">
-            <img src="${user.avatar}" alt="${user.name}" style="width:100%;height:100%;object-fit:cover" onerror="this.outerHTML='${userRole === 'user1' ? 'P' : 'G'}'" />
-          </div>
-          <div class="avatar" style="background:var(--gradient-warm);overflow:hidden;padding:0">
-            <img src="${partner.avatar}" alt="${partner.name}" style="width:100%;height:100%;object-fit:cover" onerror="this.outerHTML='${partnerRole === 'user1' ? 'P' : 'G'}'" />
-          </div>
+          <div class="avatar" style="overflow:hidden;padding:0" id="dash-user-avatar"></div>
+          <div class="avatar" style="background:var(--gradient-warm);overflow:hidden;padding:0" id="dash-partner-avatar"></div>
         </div>
       </div>
     </div>
@@ -61,14 +57,12 @@ export function renderDashboard() {
           </div>
         </div>
         <div style="text-align:center">
-          <div class="avatar" style="background:rgba(255,255,255,0.2);margin:0 auto 4px;overflow:hidden;padding:0">
-            <img src="${partner.avatar}" alt="${partner.name}" style="width:100%;height:100%;object-fit:cover" onerror="this.outerHTML='${partnerRole === 'user1' ? 'P' : 'G'}'" />
-          </div>
+          <div class="avatar" style="background:rgba(255,255,255,0.2);margin:0 auto 4px;overflow:hidden;padding:0" id="dash-partner-progress-avatar"></div>
           <div style="font-size:var(--fs-2xl);font-family:var(--font-display);font-weight:700;color:#fff">${partnerProgress}%</div>
           <div style="font-size:var(--fs-xs);opacity:0.75;color:#fff">${partner.name}</div>
         </div>
       </div>
-      <!-- Progress Bars -->
+      <!-- Progress bars -->
       <div style="margin-top:var(--space-base);display:flex;gap:var(--space-sm)">
         <div style="flex:1;background:rgba(255,255,255,0.2);border-radius:var(--radius-full);height:6px;overflow:hidden">
           <div style="width:${userProgress}%;height:100%;background:#fff;border-radius:var(--radius-full);transition:width 800ms var(--ease-out)"></div>
@@ -87,47 +81,43 @@ export function renderDashboard() {
     ${renderSavingsCard()}
 
     <!-- Categories Section -->
-    <div class="section-header" style="margin-top:var(--space-lg)">
+    <div class="section-header">
       <h2 class="section-title">Categorias</h2>
       <span class="section-action" id="view-all-plans">Ver todos</span>
     </div>
 
     <div class="flex-col gap-md stagger" id="category-list">
-      ${renderCategoryCards()}
+      ${renderCategoryCards(userRole)}
     </div>
 
-    ${renderTodayTasks()}
+    ${renderTodayTasks(userRole, partnerRole, partner)}
   `;
+
+  // Inject avatars safely via DOM (avoids HTML template escaping bugs)
+  _injectAvatar(div.querySelector('#dash-user-avatar'), user);
+  _injectAvatar(div.querySelector('#dash-partner-avatar'), partner);
+  _injectAvatar(div.querySelector('#dash-partner-progress-avatar'), partner);
 
   // Setup interactions
   setTimeout(() => {
     div.querySelectorAll('.category-card').forEach(card => {
-      card.addEventListener('click', () => {
-        router.navigate('/plans', { categoryId: card.dataset.category });
-      });
+      card.addEventListener('click', () => router.navigate('/plans', { categoryId: card.dataset.category }));
     });
 
-    div.querySelector('#view-all-plans')?.addEventListener('click', () => {
-      router.navigate('/plans');
-    });
+    div.querySelector('#view-all-plans')?.addEventListener('click', () => router.navigate('/plans'));
 
-    div.querySelector('#savings-card')?.addEventListener('click', () => {
-      router.navigate('/savings');
-    });
+    div.querySelector('#savings-card')?.addEventListener('click', () => router.navigate('/savings'));
 
     div.querySelectorAll('.quick-check-btn').forEach(btn => {
       btn.addEventListener('click', (e) => {
         e.stopPropagation();
-        const planId = btn.dataset.planId;
-        const itemId = btn.dataset.itemId;
-        const role = store.currentProfile || 'user1';
-        store.toggleItem(planId, itemId, role);
-
-        const container = document.getElementById('page-content');
-        if (container) {
-          container.innerHTML = '';
-          container.appendChild(renderDashboard());
-          container.classList.add('page-enter');
+        store.toggleItem(btn.dataset.planId, btn.dataset.itemId, store.currentProfile || 'user1');
+        // Re-render dashboard
+        const pageContent = document.getElementById('page-content');
+        if (pageContent) {
+          pageContent.innerHTML = '';
+          pageContent.appendChild(renderDashboard());
+          pageContent.classList.add('page-enter');
         }
       });
     });
@@ -136,14 +126,28 @@ export function renderDashboard() {
   return div;
 }
 
-function renderCategoryCards() {
-  const userRole = store.currentProfile || 'user1';
-  const partnerRole = store.getPartnerRole();
-  const partner = store.getPartner();
+/**
+ * Safely injects an avatar image into a container, with initial-letter fallback.
+ */
+function _injectAvatar(container, profile) {
+  if (!container) return;
+  const img = document.createElement('img');
+  img.src = profile.avatar;
+  img.alt = profile.name;
+  img.style.cssText = 'width:100%;height:100%;object-fit:cover';
+  img.onerror = () => {
+    container.textContent = profile.name[0];
+    img.remove();
+  };
+  container.appendChild(img);
+}
 
-  const activeCategories = CATEGORIES.filter(cat => store.getPlans(cat.id).length > 0);
+function renderCategoryCards(userRole) {
+  // Only show prayer and reading categories
+  const mainCats = CATEGORIES.filter(c => c.id !== 'custom');
+  const activeCats = mainCats.filter(cat => store.getPlans(cat.id).length > 0);
 
-  if (activeCategories.length === 0) {
+  if (activeCats.length === 0) {
     return `
       <div class="empty-state" style="padding:var(--space-xl)">
         <div class="empty-state-icon">📋</div>
@@ -153,7 +157,7 @@ function renderCategoryCards() {
     `;
   }
 
-  return activeCategories.map(cat => {
+  return activeCats.map(cat => {
     const plans = store.getPlans(cat.id);
     const progress = store.getCategoryProgress(cat.id, userRole);
     const totalItems = plans.reduce((sum, p) => sum + p.items.length, 0);
@@ -171,10 +175,7 @@ function renderCategoryCards() {
   }).join('');
 }
 
-function renderTodayTasks() {
-  const userRole = store.currentProfile || 'user1';
-  const partner = store.getPartner();
-  const partnerRole = store.getPartnerRole();
+function renderTodayTasks(userRole, partnerRole, partner) {
   const incompleteTasks = [];
 
   for (const plan of store.state.plans) {

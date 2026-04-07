@@ -4,12 +4,12 @@
    Santa Zélia & São Luís Martin
    =================================== */
 
-import { store, PROFILES } from '../store.js';
+import { store } from '../store.js';
 import { router } from '../router.js';
 
 // App logo SVG inline
 const APP_LOGO_SVG = `
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none" width="72" height="72">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none" width="72" height="72" style="display:block;margin:0 auto">
   <defs>
     <linearGradient id="bg-logo" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" stop-color="#2c3e6b"/>
@@ -30,26 +30,25 @@ const APP_LOGO_SVG = `
 
 export function renderProfileSelect() {
   const div = document.createElement('div');
-  div.className = 'page-container';
-  div.style.cssText = 'display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100dvh;padding:var(--space-xl)';
+  div.className = 'page-container profile-select-page';
 
   div.innerHTML = `
-    <div style="text-align:center;margin-bottom:var(--space-2xl)">
-      <div style="margin-bottom:var(--space-base)">${APP_LOGO_SVG}</div>
+    <div class="profile-select-header">
+      <div class="profile-logo">${APP_LOGO_SVG}</div>
       <h1 class="heading-lg">
         <span class="text-gradient">P&G</span>
       </h1>
-      <p class="text-secondary text-xs" style="margin-top:var(--space-xs);opacity:0.7;font-style:italic">
+      <p class="text-secondary text-xs profile-subtitle">
         Santa Zélia e São Luís Martin, rogai por nós
       </p>
       <p class="text-secondary text-sm" style="margin-top:var(--space-base)">Quem está acessando?</p>
     </div>
 
-    <div style="display:flex;gap:var(--space-xl);width:100%;max-width:360px;justify-content:center">
+    <div class="profile-cards-row">
       <!-- Pedro -->
       <div class="profile-card" data-role="user1" id="select-pedro">
         <div class="profile-avatar-wrapper">
-          <img src="/images/pedro.png" alt="Pedro" class="profile-avatar-img" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" />
+          <img src="/images/pedro.png" alt="São Luís Martin — Pedro" class="profile-avatar-img" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" />
           <div class="profile-avatar-fallback" style="display:none">P</div>
         </div>
         <div class="profile-name">Pedro</div>
@@ -59,7 +58,7 @@ export function renderProfileSelect() {
       <!-- Gabi -->
       <div class="profile-card" data-role="user2" id="select-gabi">
         <div class="profile-avatar-wrapper">
-          <img src="/images/gabi.png" alt="Gabi" class="profile-avatar-img" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" />
+          <img src="/images/gabi.png" alt="Santa Zélia Martin — Gabi" class="profile-avatar-img" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" />
           <div class="profile-avatar-fallback" style="display:none">G</div>
         </div>
         <div class="profile-name">Gabi</div>
@@ -68,6 +67,40 @@ export function renderProfileSelect() {
     </div>
 
     <style>
+      .profile-select-page {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        min-height: 100dvh;
+        padding: var(--space-xl);
+      }
+
+      .profile-select-header {
+        text-align: center;
+        margin-bottom: var(--space-2xl);
+      }
+
+      .profile-logo {
+        display: flex;
+        justify-content: center;
+        margin-bottom: var(--space-base);
+      }
+
+      .profile-subtitle {
+        margin-top: var(--space-xs);
+        opacity: 0.7;
+        font-style: italic;
+      }
+
+      .profile-cards-row {
+        display: flex;
+        gap: var(--space-xl);
+        width: 100%;
+        max-width: 360px;
+        justify-content: center;
+      }
+
       .profile-card {
         display: flex;
         flex-direction: column;
@@ -164,7 +197,6 @@ function selectProfile(role) {
   store.currentProfile = role;
   store.updateStreak();
   router.navigate('/');
-  // Refresh the page to re-render with profile
   setTimeout(() => {
     window.dispatchEvent(new CustomEvent('profilechanged'));
   }, 100);

@@ -46,14 +46,18 @@ const COUPLE_DOC_ID = 'pedro-gabi';
 const coupleRef = doc(db, 'couples', COUPLE_DOC_ID);
 
 // === Save entire state to Firestore ===
-export async function saveToFirestore(data) {
+export async function saveToFirestore(data, writeId, deviceId) {
   try {
     const clean = JSON.parse(JSON.stringify(data));
     // Remove local-only fields that shouldn't sync
     delete clean.theme;
+    delete clean._writeId;
+    delete clean._deviceId;
     await setDoc(coupleRef, {
       ...clean,
       updatedAt: Date.now(),
+      _writeId: writeId || null,
+      _deviceId: deviceId || null,
     });
     console.log('[Firebase] Saved to Firestore');
   } catch (err) {
