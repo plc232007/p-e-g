@@ -3,9 +3,9 @@
    Checklist with edit/delete capabilities
    =================================== */
 
-import { store, CATEGORIES } from '../store.js';
+import { store } from '../store.js';
 import { router } from '../router.js';
-import { getCategoryInfo, createProgressRing, showToast, triggerConfetti, showModal } from '../ui.js';
+import { createProgressRing, showToast, triggerConfetti, showModal } from '../ui.js';
 
 export function renderPlanDetail(params = {}) {
   const planId = params.id;
@@ -26,7 +26,6 @@ export function renderPlanDetail(params = {}) {
     return errorDiv;
   }
 
-  const cat = getCategoryInfo(plan.categoryId);
   const userRole = user.role;
   const partnerRole = store.getPartnerRole();
   const progress = store.getPlanProgress(plan.id, userRole);
@@ -38,11 +37,17 @@ export function renderPlanDetail(params = {}) {
   div.innerHTML = `
     <div class="page-header">
       <div class="page-header-back" id="plan-back">←</div>
-      <h1 class="page-header-title">${plan.icon || cat.icon} ${plan.title}</h1>
-      <button class="btn btn-icon btn-ghost" id="plan-menu" title="Opções">⋯</button>
+      <h1 class="page-header-title">${plan.icon || '📝'} ${plan.title}</h1>
+      ${!plan.isFixed ? `<button class="btn btn-icon btn-ghost" id="plan-menu" title="Opções">⋯</button>` : ''}
     </div>
 
     ${plan.description ? `<div class="text-sm text-secondary" style="margin-bottom:var(--space-lg)">${plan.description}</div>` : ''}
+
+    ${plan.isFixed ? `
+      <div class="badge badge-primary" style="margin-bottom:var(--space-base)">
+        📿 Plano fixo — reseta toda semana
+      </div>
+    ` : ''}
 
     <!-- Progress -->
     <div class="card" style="margin-bottom:var(--space-lg)">
@@ -53,7 +58,7 @@ export function renderPlanDetail(params = {}) {
         </div>
         <div style="text-align:right">
           <div class="text-sm text-secondary">${partner.name}</div>
-          <div class="heading-sm" style="color:var(--color-${cat.color})">${partnerProgress}%</div>
+          <div class="heading-sm" style="color:var(--color-primary-light)">${partnerProgress}%</div>
         </div>
       </div>
       <div style="display:flex;gap:var(--space-sm)">
@@ -76,15 +81,17 @@ export function renderPlanDetail(params = {}) {
       ${renderChecklist(plan, userRole, partnerRole, partner)}
     </div>
 
-    <button class="btn btn-secondary btn-full" id="add-task-btn" style="margin-top:var(--space-base)">
-      + Adicionar Tarefa
-    </button>
+    ${!plan.isFixed ? `
+      <button class="btn btn-secondary btn-full" id="add-task-btn" style="margin-top:var(--space-base)">
+        + Adicionar Tarefa
+      </button>
+    ` : ''}
   `;
 
   // Wire up event listeners after DOM is ready
   setTimeout(() => {
     div.querySelector('#plan-back')?.addEventListener('click', () =>
-      router.navigate('/plans', { categoryId: plan.categoryId })
+      router.navigate('/plans')
     );
     div.querySelector('#plan-menu')?.addEventListener('click', () =>
       showPlanMenu(plan, div, userRole, partnerRole, partner)
@@ -113,26 +120,50 @@ function renderChecklist(plan, userRole, partnerRole, partner) {
     const isChecked = item[userRole];
     const partnerChecked = item[partnerRole];
     const partnerStatusTitle = `${partner.name}: ${partnerChecked ? '✅ Feito' : '⏳ Pendente'}`;
+    const isOverdue = !isChecked && store.isTaskOverdue(item, plan);
+
+    // Deadline display
+    let deadlineInfo = '';
+    if (item.deadlineTime) {
+      deadlineInfo += `⏰ ${item.deadlineTime}`;
+    }
+    if (item.deadlineDate) {
+      deadlineInfo += ` 📅 ${formatShortDate(item.deadlineDate)}`;
+    }
 
     return `
-      <div class="checkbox-item ${isChecked ? 'checked' : ''}" data-item-id="${item.id}">
+      <div class="checkbox-item ${isChecked ? 'checked' : ''} ${isOverdue ? 'overdue-item' : ''}" data-item-id="${item.id}">
         <div class="checkbox-box">
           <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
         </div>
-        <div class="checkbox-label">${item.title}</div>
-        <button class="item-edit-btn btn btn-icon btn-ghost"
-          data-edit-item-id="${item.id}"
-          title="Editar tarefa"
-          style="width:28px;height:28px;font-size:0.8rem;flex-shrink:0">✏️</button>
+        <div style="flex:1;min-width:0">
+          <div class="checkbox-label">${item.title}</div>
+          ${deadlineInfo ? `<div class="text-xs ${isOverdue ? 'text-overdue' : 'text-muted'}" style="margin-top:2px">${deadlineInfo}${isOverdue ? ' — Atrasada!' : ''}</div>` : ''}
+        </div>
+        ${!plan.isFixed ? `
+          <button class="item-edit-btn btn btn-icon btn-ghost"
+            data-edit-item-id="${item.id}"
+            title="Editar tarefa"
+            style="width:28px;height:28px;font-size:0.8rem;flex-shrink:0">✏️</button>
+        ` : ''}
         <div class="checkbox-partner-status" title="${partnerStatusTitle}" id="partner-status-${item.id}"></div>
       </div>
     `;
   }).join('');
 }
 
+function formatShortDate(dateStr) {
+  if (!dateStr) return '';
+  const date = new Date(dateStr + 'T12:00:00');
+  const today = new Date().toISOString().slice(0, 10);
+  const tomorrow = new Date(Date.now() + 86400000).toISOString().slice(0, 10);
+  if (dateStr === today) return 'Hoje';
+  if (dateStr === tomorrow) return 'Amanhã';
+  return date.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' });
+}
+
 /**
  * Wire checkbox toggles and edit buttons. Called after innerHTML is set.
- * Also injects partner avatar dots via DOM to avoid HTML escaping issues.
  */
 function _wireChecklist(container, plan, userRole, partnerRole, partner) {
   // Inject partner status dots
@@ -220,6 +251,14 @@ async function openEditItemModal(plan, item, container, userRole, partnerRole, p
         <label class="input-label">Título da tarefa</label>
         <input class="input" id="edit-task-title" type="text" value="${item.title}" autocomplete="off" autofocus />
       </div>
+      <div class="input-group">
+        <label class="input-label">📅 Data limite (opcional)</label>
+        <input class="input" id="edit-task-date" type="date" value="${item.deadlineDate || ''}" />
+      </div>
+      <div class="input-group">
+        <label class="input-label">⏰ Hora limite (opcional)</label>
+        <input class="input" id="edit-task-time" type="time" value="${item.deadlineTime || ''}" />
+      </div>
       <button class="btn btn-primary btn-full" id="save-task-btn">Salvar ✅</button>
       <button class="btn btn-ghost btn-full" id="delete-task-btn" style="color:#c47a6e">
         🗑️ Excluir Tarefa
@@ -236,7 +275,9 @@ async function openEditItemModal(plan, item, container, userRole, partnerRole, p
       overlay.querySelector('#save-task-btn')?.addEventListener('click', () => {
         const title = input?.value.trim();
         if (!title) { showToast('Digite um título', '✏️'); return; }
-        store.updatePlanItem(plan.id, item.id, { title });
+        const deadlineDate = overlay.querySelector('#edit-task-date')?.value || null;
+        const deadlineTime = overlay.querySelector('#edit-task-time')?.value || null;
+        store.updatePlanItem(plan.id, item.id, { title, deadlineDate, deadlineTime });
         close(true);
         showToast('Tarefa atualizada!', '✏️');
         _refreshChecklist(container, plan, userRole, partnerRole, partner);
@@ -259,6 +300,14 @@ async function openAddTaskModal(plan, container, userRole, partnerRole, partner)
         <label class="input-label">Título da tarefa</label>
         <input class="input" id="new-task-title" type="text" placeholder="Ex: Ler capítulo 5" autocomplete="off" autofocus />
       </div>
+      <div class="input-group">
+        <label class="input-label">📅 Data limite (opcional)</label>
+        <input class="input" id="new-task-date" type="date" />
+      </div>
+      <div class="input-group">
+        <label class="input-label">⏰ Hora limite (opcional)</label>
+        <input class="input" id="new-task-time" type="time" />
+      </div>
       <button class="btn btn-primary btn-full" id="create-task-btn">Adicionar ✅</button>
     </div>
   `, {
@@ -272,7 +321,9 @@ async function openAddTaskModal(plan, container, userRole, partnerRole, partner)
       overlay.querySelector('#create-task-btn')?.addEventListener('click', () => {
         const title = input?.value.trim();
         if (!title) { showToast('Digite um título', '✏️'); return; }
-        store.addPlanItem(plan.id, { title });
+        const deadlineDate = overlay.querySelector('#new-task-date')?.value || null;
+        const deadlineTime = overlay.querySelector('#new-task-time')?.value || null;
+        store.addPlanItem(plan.id, { title, deadlineDate, deadlineTime });
         close(true);
         showToast('Tarefa adicionada!', '📝');
         _refreshChecklist(container, plan, userRole, partnerRole, partner);
@@ -316,7 +367,6 @@ async function showPlanMenu(plan, container, userRole, partnerRole, partner) {
 }
 
 async function openEditPlanModal(plan, container, userRole, partnerRole, partner) {
-  const cat = getCategoryInfo(plan.categoryId);
   await showModal('Editar Plano', `
     <div class="flex-col gap-lg">
       <div class="input-group">
@@ -328,35 +378,13 @@ async function openEditPlanModal(plan, container, userRole, partnerRole, partner
         <input class="input" id="edit-plan-desc" type="text" value="${plan.description || ''}" placeholder="Breve descrição" autocomplete="off" />
       </div>
       <div class="input-group">
-        <label class="input-label">Categoria</label>
-        <div style="display:flex;flex-wrap:wrap;gap:var(--space-sm)">
-          ${CATEGORIES.map(c => `
-            <button class="cat-select-btn btn btn-sm ${c.id === plan.categoryId ? 'btn-primary' : 'btn-secondary'}" data-cat="${c.id}" type="button">
-              ${c.icon} ${c.name}
-            </button>
-          `).join('')}
-        </div>
-      </div>
-      <div class="input-group">
         <label class="input-label">Ícone (emoji)</label>
-        <input class="input" id="edit-plan-icon" type="text" value="${plan.icon || cat.icon}" style="width:60px;text-align:center;font-size:1.5rem" />
+        <input class="input" id="edit-plan-icon" type="text" value="${plan.icon || '📝'}" style="width:60px;text-align:center;font-size:1.5rem" />
       </div>
       <button class="btn btn-primary btn-full" id="save-plan-btn">Salvar ✅</button>
     </div>
   `, {
     onMount: (overlay, close) => {
-      let selectedCat = plan.categoryId;
-
-      overlay.querySelectorAll('.cat-select-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-          overlay.querySelectorAll('.cat-select-btn').forEach(b => {
-            b.className = 'cat-select-btn btn btn-sm btn-secondary';
-          });
-          btn.className = 'cat-select-btn btn btn-sm btn-primary';
-          selectedCat = btn.dataset.cat;
-        });
-      });
-
       overlay.querySelector('#save-plan-btn')?.addEventListener('click', () => {
         const title = overlay.querySelector('#edit-plan-title')?.value.trim();
         if (!title) { showToast('Digite um título', '✏️'); return; }
@@ -364,7 +392,6 @@ async function openEditPlanModal(plan, container, userRole, partnerRole, partner
           title,
           description: overlay.querySelector('#edit-plan-desc')?.value.trim() || '',
           icon: overlay.querySelector('#edit-plan-icon')?.value.trim() || '📝',
-          categoryId: selectedCat,
         });
         close(true);
         showToast('Plano atualizado!', '✏️');

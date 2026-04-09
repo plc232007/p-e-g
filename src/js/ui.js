@@ -3,7 +3,7 @@
    Rendering utilities & shared UI
    =================================== */
 
-import { store, CATEGORIES } from './store.js';
+import { store } from './store.js';
 
 // === Greeting based on time ===
 export function getGreeting() {
@@ -15,8 +15,15 @@ export function getGreeting() {
 }
 
 // === Category helpers ===
+const CATEGORY_MAP = {
+  terco: { id: 'terco', name: 'Terço', icon: '📿', color: 'prayer' },
+  prayer: { id: 'prayer', name: 'Oração', icon: '🙏', color: 'prayer' },
+  reading: { id: 'reading', name: 'Leitura', icon: '📖', color: 'reading' },
+  custom: { id: 'custom', name: 'Personalizado', icon: '✨', color: 'custom' },
+};
+
 export function getCategoryInfo(categoryId) {
-  return CATEGORIES.find(c => c.id === categoryId) || CATEGORIES[CATEGORIES.length - 1];
+  return CATEGORY_MAP[categoryId] || CATEGORY_MAP.custom;
 }
 
 // === Progress Ring (SVG) ===
